@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<job-scheduling-data
+	xmlns="http://www.quartz-scheduler.org/xml/JobSchedulingData"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.quartz-scheduler.org/xml/JobSchedulingData http://www.quartz-scheduler.org/xml/job_scheduling_data_1_8.xsd"
+	version="1.8">
+
+	<schedule>
+
+		<job>
+			<name>InvokeClientConfigurationIsReayJob</name>
+			<group>InvokeClientConfigurationIsReayJobGroup</group>
+			<description>Invoke Client Configuration Is Reay Job</description>
+			<job-class>com.qbanalytix.cognostest.quartz.InvokeClientConfigurationIsReayJob</job-class>
+		</job>
+		<trigger>
+			<simple>
+				<name>InvokeClientConfigurationIsReayJobTrigger</name>
+				<group>InvokeClientConfigurationIsReayJobTriggerGroup</group>
+				<job-name>InvokeClientConfigurationIsReayJob</job-name>
+				<job-group>InvokeClientConfigurationIsReayJobGroup</job-group>
+				<misfire-instruction>MISFIRE_INSTRUCTION_RESCHEDULE_NEXT_WITH_REMAINING_COUNT</misfire-instruction>
+				<repeat-count>-1</repeat-count>
+				<repeat-interval>5000</repeat-interval>
+			</simple>
+		</trigger>
+
+	</schedule>
+
+</job-scheduling-data>
