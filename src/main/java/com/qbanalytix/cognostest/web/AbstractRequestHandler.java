@@ -123,8 +123,8 @@ public abstract class AbstractRequestHandler implements ILogger {
 
 	private void requestToContext(HttpServletRequest request, Context context) throws IOException {
 		context.clear();
-		requestStreamToContext(request, context);
 		requestParametersToContext(request, context);
+		requestStreamToContext(request, context);
 	}
 
 	private void requestStreamToContext(HttpServletRequest request, Context context) throws IOException {
