@@ -7,15 +7,26 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import javax.swing.JDialog;
 import javax.swing.JScrollPane;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.ganesha.context.Context;
+import com.ganesha.core.exception.AppException;
 import com.ganesha.core.exception.UserException;
+import com.ganesha.desktop.component.ComboBoxObject;
 import com.ganesha.desktop.component.XJButton;
+import com.ganesha.desktop.component.XJComboBox;
 import com.ganesha.desktop.component.XJDialog;
 import com.ganesha.desktop.component.XJLabel;
 import com.ganesha.desktop.component.XJPanel;
@@ -27,15 +38,20 @@ import com.ganesha.desktop.component.xtableutils.XTableConstants;
 import com.ganesha.desktop.component.xtableutils.XTableParameter;
 import com.ganesha.desktop.exeptions.ExceptionHandler;
 import com.qbanalytix.cognostest.business.dao.DaoCollection;
+import com.qbanalytix.cognostest.clientinvoker.InvokeClientConfigurationConfigureThread;
+import com.qbanalytix.cognostest.clientinvoker.base.IClientInvokerListener;
 import com.qbanalytix.cognostest.context.ApplicationContext;
 import com.qbanalytix.cognostest.context.ThreadContext;
 import com.qbanalytix.cognostest.resources.model.ClientInformation;
 import com.qbanalytix.cognostest.resources.model.CognosInformation;
 import com.qbanalytix.cognostest.ui.forms.clientinvokerlistener.ListClientIdentifier;
+import com.qbanalytix.cognostest.web.ServiceResponse;
 
 import net.miginfocom.swing.MigLayout;
 
-public class ClientConfigurationDialog extends XJDialog {
+public class ClientConfigurationDialog extends XJDialog implements IClientInvokerListener {
+
+	private static final Logger logger = LoggerFactory.getLogger(ClientConfigurationDialog.class);
 
 	private static final long serialVersionUID = 1L;
 
@@ -63,6 +79,9 @@ public class ClientConfigurationDialog extends XJDialog {
 
 	private CognosInformation defaultCognosInformation;
 	private XJPanel pnlCognosInformation;
+	private XJButton btnBroadcastCofiguration;
+	private XJLabel lblWebClient;
+	private XJComboBox comboBox;
 
 	{
 		tableParameters.put(ColumnEnum.TEST_URL, new XTableParameter(0, 10, false, "Test URL(s)", false,
@@ -142,7 +161,7 @@ public class ClientConfigurationDialog extends XJDialog {
 		pnlCognosInformation = new XJPanel();
 		pnlCognosInformation.setBorder(new XTitledBorder("Cognos Information"));
 		getContentPane().add(pnlCognosInformation, "cell 1 1,grow");
-		pnlCognosInformation.setLayout(new MigLayout("", "[100px][grow]", "[][][][][]"));
+		pnlCognosInformation.setLayout(new MigLayout("", "[100px][grow]", "[][][][][][]"));
 
 		XJLabel lblCognosUsername = new XJLabel();
 		pnlCognosInformation.add(lblCognosUsername, "cell 0 0,alignx trailing");
@@ -182,9 +201,23 @@ public class ClientConfigurationDialog extends XJDialog {
 				setDefault();
 			}
 		});
+
+		lblWebClient = new XJLabel();
+		lblWebClient.setText("Web Client");
+		pnlCognosInformation.add(lblWebClient, "cell 0 4,alignx trailing");
+
+		comboBox = new XJComboBox();
+		comboBox.setName("webclient");
+		comboBox.addItem(new ComboBoxObject(null, null));
+		comboBox.addItem(new ComboBoxObject("Internet Explorer", "Internet Explorer"));
+		comboBox.addItem(new ComboBoxObject("Mozilla Firefox", "Mozilla Firefox"));
+		comboBox.addItem(new ComboBoxObject("Google Chrome", "Google Chrome"));
+		comboBox.addItem(new ComboBoxObject("Opera", "Opera"));
+
+		pnlCognosInformation.add(comboBox, "cell 1 4,growx");
 		btnDefault.setMnemonic('D');
 		btnDefault.setText("Default");
-		pnlCognosInformation.add(btnDefault, "flowx,cell 1 4,alignx right");
+		pnlCognosInformation.add(btnDefault, "flowx,cell 1 5,alignx right");
 
 		btnSave = new XJButton();
 		btnSave.addActionListener(new ActionListener() {
@@ -194,11 +227,11 @@ public class ClientConfigurationDialog extends XJDialog {
 		});
 		btnSave.setMnemonic('S');
 		btnSave.setText("Save");
-		pnlCognosInformation.add(btnSave, "cell 1 4");
+		pnlCognosInformation.add(btnSave, "cell 1 5");
 
 		pnlButton = new XJPanel();
 		getContentPane().add(pnlButton, "cell 0 2 2 1,alignx trailing,growy");
-		pnlButton.setLayout(new MigLayout("", "[]", "[][]"));
+		pnlButton.setLayout(new MigLayout("", "[][]", "[][]"));
 
 		btnCancel = new XJButton();
 		btnCancel.addActionListener(new ActionListener() {
@@ -209,6 +242,20 @@ public class ClientConfigurationDialog extends XJDialog {
 		btnCancel.setMnemonic('C');
 		btnCancel.setText("Close");
 		pnlButton.add(btnCancel, "cell 0 0");
+
+		btnBroadcastCofiguration = new XJButton();
+		btnBroadcastCofiguration.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				try {
+					broadcastConfiguration();
+				} catch (UserException ex) {
+					ExceptionHandler.handleException(ClientConfigurationDialog.this, ex);
+				}
+			}
+		});
+		btnBroadcastCofiguration.setMnemonic('B');
+		btnBroadcastCofiguration.setText("Broadcast Cofiguration");
+		pnlButton.add(btnBroadcastCofiguration, "cell 1 0");
 
 		pack();
 		setLocationRelativeTo(parent);
@@ -256,6 +303,43 @@ public class ClientConfigurationDialog extends XJDialog {
 		dispose();
 	}
 
+	private void broadcastConfiguration() throws UserException {
+
+		List<String> clientIdentifiers = daoCollection.getGlobalDao().getClientIdentifiers(null);
+		int numberOfThread = clientIdentifiers.size();
+		ExecutorService executor = Executors.newFixedThreadPool(numberOfThread);
+
+		for (int i = 0; i < numberOfThread; ++i) {
+			Context context = new ThreadContext(ApplicationContext.getInstance());
+			context.put("clientIdentifier", clientIdentifiers.get(i));
+			ClientInformation clientInformation = daoCollection.getGlobalDao().getClient(context);
+			CognosInformation cognosInformation = new CognosInformation();
+
+			CognosInformation configFromDB = daoCollection.getGlobalDao().loadCognosConfiguraton(context);
+			cognosInformation.setCognosURL(configFromDB.getCognosURL());
+			cognosInformation.setCognosLogoutURL(configFromDB.getCognosLogoutURL());
+			cognosInformation.setCognosReportURLs(configFromDB.getCognosReportURLs());
+
+			cognosInformation.setWebclient(clientInformation.getWebclient());
+			cognosInformation.setNumberOfThread(clientInformation.getNumberOfThread());
+			cognosInformation.setCognosUsername(clientInformation.getCognosUsername());
+			cognosInformation.setCognosPassword(clientInformation.getCognosPassword());
+			cognosInformation.setCognosReportTestCounter(clientInformation.getCognosReportTestCounter());
+
+			InvokeClientConfigurationConfigureThread thread = new InvokeClientConfigurationConfigureThread(
+					cognosInformation, clientInformation, (IClientInvokerListener) this);
+			executor.execute(thread);
+		}
+
+		executor.shutdown();
+
+		try {
+			executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+		} catch (InterruptedException e) {
+			throw new AppException(e);
+		}
+	}
+
 	private void initForm() throws UserException {
 		defaultCognosInformation = daoCollection.getGlobalDao()
 				.loadCognosConfiguraton(new ThreadContext(ApplicationContext.getInstance()));
@@ -269,5 +353,26 @@ public class ClientConfigurationDialog extends XJDialog {
 
 	private enum ColumnEnum {
 		TEST_URL
+	}
+
+	@Override
+	public void handleResponse(Context context, ServiceResponse serviceResponse) {
+		logger.debug(new StringBuilder("Set configuration to cient ")
+				.append(((ClientInformation) context.get("clientInformation")).getIdentifier())
+				.append(" is done successfully").toString());
+	}
+
+	@Override
+	public void handleException(Context context, Exception e) {
+		logger.error(new StringBuilder("Set configuration to cient ")
+				.append(((ClientInformation) context.get("clientInformation")).getIdentifier()).append(" is failed")
+				.toString(), e);
+	}
+
+	@Override
+	public void handleException(Context context, String response) {
+		logger.error(new StringBuilder("Set configuration to cient ")
+				.append(((ClientInformation) context.get("clientInformation")).getIdentifier()).append(" is failed")
+				.toString(), response);
 	}
 }

@@ -17,7 +17,9 @@ import javax.swing.JScrollPane;
 
 import com.ganesha.context.Context;
 import com.ganesha.core.exception.UserException;
+import com.ganesha.desktop.component.ComboBoxObject;
 import com.ganesha.desktop.component.XJButton;
+import com.ganesha.desktop.component.XJComboBox;
 import com.ganesha.desktop.component.XJDialog;
 import com.ganesha.desktop.component.XJLabel;
 import com.ganesha.desktop.component.XJPanel;
@@ -62,6 +64,8 @@ public class CognosInformationDialog extends XJDialog {
 	private XJButton btnCancel;
 	private XJButton btnSave;
 	private XJButton btnSetToAll;
+	private XJLabel lblWebClient;
+	private XJComboBox comboBox;
 
 	{
 		tableParameters.put(ColumnEnum.TEST_URL, new XTableParameter(0, 10, false, "Test URL(s)", false,
@@ -163,7 +167,7 @@ public class CognosInformationDialog extends XJDialog {
 		XJPanel pnlTestScenario = new XJPanel();
 		pnlTestScenario.setBorder(new XTitledBorder("Test Scenario"));
 		getContentPane().add(pnlTestScenario, "cell 0 1,grow");
-		pnlTestScenario.setLayout(new MigLayout("", "[100px][grow]", "[][]"));
+		pnlTestScenario.setLayout(new MigLayout("", "[100px][grow]", "[][][]"));
 
 		XJLabel lblNumberOfThread = new XJLabel();
 		lblNumberOfThread.setText("Number of Thread");
@@ -180,6 +184,19 @@ public class CognosInformationDialog extends XJDialog {
 		txtCognosReportTestCounter = new XJTextField();
 		txtCognosReportTestCounter.setName("cognosReportTestCounter");
 		pnlTestScenario.add(txtCognosReportTestCounter, "cell 1 1,growx");
+		
+		lblWebClient = new XJLabel();
+		lblWebClient.setText("Web Client");
+		pnlTestScenario.add(lblWebClient, "cell 0 2,alignx trailing");
+		
+		comboBox = new XJComboBox();
+		comboBox.setName("webclient");
+		comboBox.addItem(new ComboBoxObject(null, null));
+		comboBox.addItem(new ComboBoxObject("Internet Explorer", "Internet Explorer"));
+		comboBox.addItem(new ComboBoxObject("Mozilla Firefox", "Mozilla Firefox"));
+		comboBox.addItem(new ComboBoxObject("Google Chrome", "Google Chrome"));
+		comboBox.addItem(new ComboBoxObject("Opera", "Opera"));
+		pnlTestScenario.add(comboBox, "cell 1 2,growx");
 
 		panel = new XJPanel();
 		getContentPane().add(panel, "cell 0 2 2 1,grow");
@@ -313,6 +330,7 @@ public class CognosInformationDialog extends XJDialog {
 			context.put("clientIdentifier", clientIdentifier);
 			ClientInformation clientInformation = daoCollection.getGlobalDao().getClient(context);
 			CognosInformation cognosInformation = MappingFormBean.createInstanceFormBean(this, CognosInformation.class);
+			clientInformation.setWebclient(cognosInformation.getWebclient());
 			clientInformation.setNumberOfThread(cognosInformation.getNumberOfThread());
 			clientInformation.setCognosUsername(cognosInformation.getCognosUsername());
 			clientInformation.setCognosPassword(cognosInformation.getCognosPassword());

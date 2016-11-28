@@ -13,7 +13,7 @@ public interface IGlobalDao {
 	public void addClientInformation(Context context) throws UserException;
 
 	public List<String> getClientIdentifiers(Context context) throws UserException;
-	
+
 	public ClientInformation getClient(Context context) throws UserException;
 
 	public void removeClient(Context context) throws UserException;
@@ -27,4 +27,7 @@ public interface IGlobalDao {
 	public List<ClientReport> getClientReports(Context context) throws UserException;
 
 	public void clearClientReport(Context context) throws UserException;
+
+	public void updateClientStatus(Context context) throws UserException;
+	
 }

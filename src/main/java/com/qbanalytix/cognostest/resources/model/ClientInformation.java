@@ -2,6 +2,7 @@ package com.qbanalytix.cognostest.resources.model;
 
 public class ClientInformation {
 
+	private String webclient;
 	private String hostname;
 	private String ipAddress;
 	private Integer port;
@@ -13,6 +14,14 @@ public class ClientInformation {
 	public String getIdentifier() {
 		return new StringBuilder(ipAddress).append(":").append(port).append(" [").append(hostname).append("]")
 				.toString();
+	}
+
+	public String getWebclient() {
+		return webclient;
+	}
+
+	public void setWebclient(String webclient) {
+		this.webclient = webclient;
 	}
 
 	public String getHostname() {

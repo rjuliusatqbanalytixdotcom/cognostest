@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import com.ganesha.core.SystemSetting;
 import com.ganesha.core.exception.AppException;
 import com.ganesha.core.utils.Formatter;
+import com.ganesha.core.utils.ResourceUtils;
 import com.ganesha.desktop.component.XComponentProperties;
 import com.ganesha.desktop.component.permissionutils.PermissionChecker;
 import com.ganesha.desktop.exeptions.ExceptionHandler;
@@ -48,7 +49,7 @@ public class Main {
 
 					startJetty();
 					runQuartz();
-					
+
 					MainFrame.getInstance().setVisible(true);
 
 				} catch (Exception e) {
@@ -112,7 +113,8 @@ public class Main {
 
 		InputStream inputStream = null;
 		try {
-			inputStream = FileUtils.openInputStream(new File(SystemSetting.getProperty("logging.file.config")));
+			inputStream = FileUtils.openInputStream(
+					new File(ResourceUtils.getConfigBase(), SystemSetting.getProperty("logging.file.config")));
 
 			JoranConfigurator configurator = new JoranConfigurator();
 			configurator.setContext(loggerContext);

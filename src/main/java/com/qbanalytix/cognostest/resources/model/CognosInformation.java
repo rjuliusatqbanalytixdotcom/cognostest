@@ -7,6 +7,7 @@ public class CognosInformation implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
+	private String webclient;
 	private Integer numberOfThread;
 	private String cognosURL;
 	private String cognosUsername;
@@ -14,6 +15,14 @@ public class CognosInformation implements Serializable {
 	private List<String> cognosReportURLs;
 	private Integer cognosReportTestCounter;
 	private String cognosLogoutURL;
+
+	public String getWebclient() {
+		return webclient;
+	}
+
+	public void setWebclient(String webclient) {
+		this.webclient = webclient;
+	}
 
 	public Integer getNumberOfThread() {
 		return numberOfThread;

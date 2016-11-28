@@ -69,6 +69,9 @@ public class MainFrame extends XJFrame {
 		XJMenu mnSetting = createMenu("Setting", null);
 		createMenuItem(mnSetting, CognosInformationDialog.class, "Cognos Information", false, null);
 		createMenuItem(mnSetting, ClientConfigurationDialog.class, "Client Configuration", false, null);
+		
+		XJMenu mnRun = createMenu("Run", null);
+		createMenuItem(mnRun, TestDialog.class, "Run Test", false, null);
 
 		getContentPane()
 				.setLayout(new MigLayout("", "[200px,grow][][200px,grow]", "[50px,grow][][100px,grow,baseline]"));
