@@ -15,6 +15,7 @@ import org.openqa.selenium.io.IOUtils;
 import com.ganesha.core.exception.AppException;
 import com.ganesha.core.exception.UserException;
 import com.ganesha.core.utils.ResourceUtils;
+import com.qbanalytix.cognostest.application.ProgressStatus;
 import com.qbanalytix.cognostest.business.dao.DaoCollection;
 import com.qbanalytix.cognostest.context.ApplicationContext;
 import com.qbanalytix.cognostest.resources.model.ClientInformation;
@@ -26,6 +27,7 @@ public class DownloadReport {
 
 	private static final File DIR = new File(ResourceUtils.getResourceBase(), "reports");
 	private static final String FILE_ALL_DATA = "01_all_data.csv";
+	private static final String PROGRESS_STATUS = "02_progress.csv";
 
 	private static final DateFormat MILLES_FORMAT = new SimpleDateFormat("HH:mm:ss.SSS");
 
@@ -42,7 +44,7 @@ public class DownloadReport {
 			pw = new PrintWriter(os);
 
 			List<ClientReport> clientReports = daoCollection.getGlobalDao().getClientReports(null);
-			
+
 			for (ClientReport clientReport : clientReports) {
 				ClientInformation clientInformation = clientReport.getClientInformation();
 				String identifier = clientInformation.getIdentifier();
@@ -70,7 +72,45 @@ public class DownloadReport {
 			IOUtils.closeQuietly(pw);
 			IOUtils.closeQuietly(os);
 		}
+	}
 
+	public static void exportProgressStatusToCSV() throws UserException {
+
+		OutputStream os = null;
+		PrintWriter pw = null;
+		try {
+
+			File file = new File(DIR, PROGRESS_STATUS);
+			FileUtils.forceMkdir(DIR);
+
+			os = new FileOutputStream(file);
+			pw = new PrintWriter(os);
+
+			List<Object[]> all = ProgressStatus.getAll();
+			for (Object[] objects : all) {
+				StringBuilder builder = new StringBuilder();
+				for (Object object : objects) {
+					append(builder, object);
+				}
+				pw.println(builder.toString().replaceFirst("|", ""));
+			}
+
+		} catch (IOException e) {
+			throw new AppException(e);
+		} finally {
+			IOUtils.closeQuietly(pw);
+			IOUtils.closeQuietly(os);
+		}
+	}
+
+	private static void append(StringBuilder builder, Object token) {
+		if (token instanceof Number) {
+			append(builder, (Number) token);
+		} else if (token instanceof String) {
+			append(builder, (String) token);
+		} else {
+			append(builder, token.toString());
+		}
 	}
 
 	private static void append(StringBuilder builder, String token) {

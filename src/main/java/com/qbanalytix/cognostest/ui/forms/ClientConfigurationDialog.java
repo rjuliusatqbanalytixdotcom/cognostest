@@ -80,12 +80,8 @@ public class ClientConfigurationDialog extends XJDialog implements IClientInvoke
 	private CognosInformation defaultCognosInformation;
 	private XJPanel pnlCognosInformation;
 	private XJButton btnBroadcastCofiguration;
-<<<<<<< HEAD
 	private XJLabel lblWebClient;
 	private XJComboBox comboBox;
-=======
->>>>>>> branch 'master' of https://github.com/rjuliusatqbanalytixdotcom/cognostest.git
-
 	{
 		tableParameters.put(ColumnEnum.TEST_URL, new XTableParameter(0, 10, false, "Test URL(s)", false,
 				XTableConstants.CELL_RENDERER_LEFT, String.class));
@@ -323,10 +319,7 @@ public class ClientConfigurationDialog extends XJDialog implements IClientInvoke
 			cognosInformation.setCognosLogoutURL(configFromDB.getCognosLogoutURL());
 			cognosInformation.setCognosReportURLs(configFromDB.getCognosReportURLs());
 
-<<<<<<< HEAD
 			cognosInformation.setWebclient(clientInformation.getWebclient());
-=======
->>>>>>> branch 'master' of https://github.com/rjuliusatqbanalytixdotcom/cognostest.git
 			cognosInformation.setNumberOfThread(clientInformation.getNumberOfThread());
 			cognosInformation.setCognosUsername(clientInformation.getCognosUsername());
 			cognosInformation.setCognosPassword(clientInformation.getCognosPassword());

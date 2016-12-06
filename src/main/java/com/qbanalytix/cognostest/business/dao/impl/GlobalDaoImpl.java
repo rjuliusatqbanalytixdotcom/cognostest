@@ -9,16 +9,13 @@ import javax.swing.DefaultListModel;
 import com.ganesha.context.Context;
 import com.ganesha.core.SystemSetting;
 import com.ganesha.core.exception.UserException;
-import com.ganesha.core.utils.Formatter;
 import com.ganesha.desktop.component.ComboBoxObject;
-import com.ganesha.desktop.component.xtableutils.XTableModel;
+import com.qbanalytix.cognostest.application.ProgressStatus;
 import com.qbanalytix.cognostest.business.dao.interfaces.IGlobalDao;
 import com.qbanalytix.cognostest.resources.model.ClientInformation;
 import com.qbanalytix.cognostest.resources.model.ClientReport;
 import com.qbanalytix.cognostest.resources.model.CognosInformation;
 import com.qbanalytix.cognostest.ui.forms.clientinvokerlistener.ListClientIdentifier;
-import com.qbanalytix.cognostest.ui.forms.clientinvokerlistener.TableTestStatus;
-import com.qbanalytix.cognostest.ui.forms.clientinvokerlistener.TableTestStatus.ColumnEnum;
 
 public class GlobalDaoImpl implements IGlobalDao {
 
@@ -30,7 +27,6 @@ public class GlobalDaoImpl implements IGlobalDao {
 		DefaultListModel<ComboBoxObject> listModel = (DefaultListModel<ComboBoxObject>) ListClientIdentifier
 				.getInstance().getModel();
 		listModel.addElement(new ComboBoxObject(clientInformation, clientInformation.getIdentifier()));
-		TableTestStatus.getInstance().loadData();
 	}
 
 	@Override
@@ -72,7 +68,6 @@ public class GlobalDaoImpl implements IGlobalDao {
 		if (targetIndex >= 0) {
 			listModel.remove(targetIndex);
 		}
-		TableTestStatus.getInstance().loadData();
 	}
 
 	@Override
@@ -104,39 +99,8 @@ public class GlobalDaoImpl implements IGlobalDao {
 
 	@Override
 	public void updateClientStatus(Context context) throws UserException {
-
 		ClientInformation clientInformation = (ClientInformation) context.get("clientInformation");
-		XTableModel tableModel = (XTableModel) TableTestStatus.getInstance().getModel();
-
-		for (int i = 0; i < tableModel.getRowCount(); ++i) {
-
-			String identifier = (String) tableModel.getValueAt(i, TableTestStatus.getInstance().getTableParameters()
-					.get(ColumnEnum.CLIENT_IDENTIFIER).getColumnIndex());
-
-			if (clientInformation.getIdentifier().equals(identifier)) {
-
-				// int current = Formatter.formatStringToNumber((String)
-				// context.get("current")).intValue() + 1;
-				int total = Formatter.formatStringToNumber((String) context.get("total")).intValue();
-
-				int current = (int) tableModel.getValueAt(i, TableTestStatus.getInstance().getTableParameters()
-						.get(ColumnEnum.LOOP_COUNTER).getColumnIndex()) + 1;
-
-				tableModel.setValueAt(current, i, TableTestStatus.getInstance().getTableParameters()
-						.get(ColumnEnum.LOOP_COUNTER).getColumnIndex());
-
-				if (current == total) {
-					tableModel.setValueAt("DONE", i,
-							TableTestStatus.getInstance().getTableParameters().get(ColumnEnum.STATUS).getColumnIndex());
-				} else {
-					tableModel.setValueAt("RUNNING", i,
-							TableTestStatus.getInstance().getTableParameters().get(ColumnEnum.STATUS).getColumnIndex());
-				}
-			}
-		}
-
-		// if (TableTestStatus.getInstance().isDone()) {
-		// TableTestStatus.getInstance().stop();
-		// }
+		ProgressStatus.increaseLoop(clientInformation.getIdentifier(), context.getString("threadId"),
+				Long.valueOf(context.getString("timeConsumed")));
 	}
 }

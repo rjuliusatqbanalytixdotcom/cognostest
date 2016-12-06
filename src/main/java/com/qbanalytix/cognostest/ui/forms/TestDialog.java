@@ -5,40 +5,23 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import javax.swing.JDialog;
 import javax.swing.JScrollPane;
 
-import com.ganesha.context.Context;
-import com.ganesha.core.exception.AppException;
 import com.ganesha.core.exception.UserException;
 import com.ganesha.desktop.component.XJButton;
 import com.ganesha.desktop.component.XJPanel;
 import com.ganesha.desktop.component.XJTableDialog;
-import com.ganesha.desktop.component.xtableutils.XTableModel;
 import com.ganesha.desktop.exeptions.ExceptionHandler;
+import com.qbanalytix.cognostest.application.ProgressStatus;
 import com.qbanalytix.cognostest.business.application.DownloadReport;
-import com.qbanalytix.cognostest.business.dao.DaoCollection;
-import com.qbanalytix.cognostest.clientinvoker.InvokeLaunchTestScenarioThread;
-import com.qbanalytix.cognostest.clientinvoker.base.IClientInvokerListener;
-import com.qbanalytix.cognostest.context.ApplicationContext;
-import com.qbanalytix.cognostest.context.ThreadContext;
-import com.qbanalytix.cognostest.resources.model.ClientInformation;
-import com.qbanalytix.cognostest.ui.forms.clientinvokerlistener.TableTestStatus;
-import com.qbanalytix.cognostest.ui.forms.clientinvokerlistener.TableTestStatus.ColumnEnum;
-import com.qbanalytix.cognostest.web.ServiceResponse;
 
 import net.miginfocom.swing.MigLayout;
 
-public class TestDialog extends XJTableDialog implements IClientInvokerListener {
+public class TestDialog extends XJTableDialog {
 
 	private static final long serialVersionUID = 1401014426195840845L;
-
-	private DaoCollection daoCollection = (DaoCollection) ApplicationContext.getBean("daoCollection");
 
 	private JScrollPane scrollPane;
 	private XJButton btnStop;
@@ -69,12 +52,12 @@ public class TestDialog extends XJTableDialog implements IClientInvokerListener 
 				}
 			}
 		});
-		getContentPane().setLayout(new MigLayout("", "[500px,grow]", "[200px][]"));
+		getContentPane().setLayout(new MigLayout("", "[700px,grow]", "[200px][]"));
 
-		scrollPane = new JScrollPane(TableTestStatus.getInstance());
+		scrollPane = new JScrollPane(ProgressStatus.getInstance());
 		getContentPane().add(scrollPane, "cell 0 0,grow");
 
-		TableTestStatus.getInstance().setDialog(this);
+		ProgressStatus.setDialog(this);
 
 		XJPanel pnlButton = new XJPanel();
 		getContentPane().add(pnlButton, "cell 0 1,alignx center,growy");
@@ -93,7 +76,12 @@ public class TestDialog extends XJTableDialog implements IClientInvokerListener 
 		btnStop = new XJButton();
 		btnStop.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				TableTestStatus.getInstance().stop();
+				try {
+					ProgressStatus.stop();
+					setRunState(false);
+				} catch (UserException ex) {
+					ExceptionHandler.handleException(TestDialog.this, ex);
+				}
 			}
 		});
 		btnStop.setMnemonic('O');
@@ -104,9 +92,7 @@ public class TestDialog extends XJTableDialog implements IClientInvokerListener 
 		btnRun.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				try {
-					if (!TableTestStatus.getInstance().isRunning()) {
-						triggerRunToClient();
-					}
+					ProgressStatus.start();
 					setRunState(true);
 				} catch (UserException ex) {
 					ExceptionHandler.handleException(TestDialog.this, ex);
@@ -122,6 +108,7 @@ public class TestDialog extends XJTableDialog implements IClientInvokerListener 
 			public void actionPerformed(ActionEvent e) {
 				try {
 					DownloadReport.download();
+					DownloadReport.exportProgressStatusToCSV();
 				} catch (UserException ex) {
 					ExceptionHandler.handleException(TestDialog.this, ex);
 				}
@@ -144,8 +131,7 @@ public class TestDialog extends XJTableDialog implements IClientInvokerListener 
 	}
 
 	private void initForm() throws UserException {
-		setRunState(TableTestStatus.getInstance().isRunning());
-		loadDataInThread();
+		setRunState(ProgressStatus.isRunning());
 	}
 
 	public void setRunState(boolean runState) throws UserException {
@@ -153,63 +139,10 @@ public class TestDialog extends XJTableDialog implements IClientInvokerListener 
 		btnStop.setEnabled(runState);
 	}
 
-	private void triggerRunToClient() throws UserException {
-
-		daoCollection.getGlobalDao().clearClientReport(null);
-
-		List<String> clientIdentifiers = daoCollection.getGlobalDao().getClientIdentifiers(null);
-		int numberOfThread = clientIdentifiers.size();
-		ExecutorService executor = Executors.newFixedThreadPool(numberOfThread);
-
-		for (int i = 0; i < numberOfThread; ++i) {
-			Context context = new ThreadContext(ApplicationContext.getInstance());
-			context.put("clientIdentifier", clientIdentifiers.get(i));
-			InvokeLaunchTestScenarioThread thread = new InvokeLaunchTestScenarioThread(
-					daoCollection.getGlobalDao().getClient(context), this);
-			executor.execute(thread);
-		}
-
-		executor.shutdown();
-
-		try {
-			executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
-		} catch (InterruptedException e) {
-			throw new AppException(e);
-		}
-	}
-
 	@Override
 	public void loadData() throws UserException {
-		TableTestStatus.getInstance().loadData();
-	}
-
-	@Override
-	public void handleResponse(Context context, ServiceResponse serviceResponse) {
-		ClientInformation clientInformation = (ClientInformation) context.get("clientInformation");
-		updateClientStatus(clientInformation, "RUNNING");
-	}
-
-	@Override
-	public void handleException(Context context, Exception e) {
-		ClientInformation clientInformation = (ClientInformation) context.get("clientInformation");
-		updateClientStatus(clientInformation, "ERROR");
-	}
-
-	@Override
-	public void handleException(Context context, String response) {
-		ClientInformation clientInformation = (ClientInformation) context.get("clientInformation");
-		updateClientStatus(clientInformation, "ERROR");
-	}
-
-	private void updateClientStatus(ClientInformation clientInformation, String status) {
-		XTableModel tableModel = (XTableModel) TableTestStatus.getInstance().getModel();
-		for (int i = 0; i < tableModel.getRowCount(); ++i) {
-			String identifier = (String) tableModel.getValueAt(i, TableTestStatus.getInstance().getTableParameters()
-					.get(ColumnEnum.CLIENT_IDENTIFIER).getColumnIndex());
-			if (identifier.equals(clientInformation.getIdentifier())) {
-				tableModel.setValueAt(status, i,
-						TableTestStatus.getInstance().getTableParameters().get(ColumnEnum.STATUS).getColumnIndex());
-			}
-		}
+		/*
+		 * Do nothing
+		 */
 	}
 }
