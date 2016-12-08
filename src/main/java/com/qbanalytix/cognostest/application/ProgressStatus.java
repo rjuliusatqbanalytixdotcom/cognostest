@@ -11,7 +11,6 @@ import java.util.concurrent.TimeUnit;
 import com.ganesha.context.Context;
 import com.ganesha.core.exception.AppException;
 import com.ganesha.core.exception.UserException;
-import com.ganesha.core.utils.Formatter;
 import com.ganesha.desktop.component.XJTable;
 import com.ganesha.desktop.component.xtableutils.XTableConstants;
 import com.ganesha.desktop.component.xtableutils.XTableModel;
@@ -58,6 +57,13 @@ public class ProgressStatus extends XJTable implements IClientInvokerListener {
 
 		tableParameters.put(ColumnEnum.TIME_CONSUMED_STRING, new XTableParameter(7, 12, false, "Time Consumed", false,
 				XTableConstants.CELL_RENDERER_CENTER, String.class));
+
+		tableParameters.put(ColumnEnum.TIME_CONSUMED_PER_LOOP_AVG, new XTableParameter(8, 22, false,
+				"Time Consumed per Loop", false, XTableConstants.CELL_RENDERER_CENTER, String.class));
+
+		tableParameters.put(ColumnEnum.TIME_CONSUMED_PER_REPORT_AVG, new XTableParameter(9, 25, false,
+				"Time Consumed per Reports", false, XTableConstants.CELL_RENDERER_CENTER, String.class));
+
 	}
 
 	private static final ProgressStatus instance = new ProgressStatus();
@@ -129,13 +135,21 @@ public class ProgressStatus extends XJTable implements IClientInvokerListener {
 		objects[getColumnIndex(ColumnEnum.CLIENT_IDENTIFIER)] = clientIdentifier;
 		objects[getColumnIndex(ColumnEnum.THREAD_ID)] = threadId;
 		objects[getColumnIndex(ColumnEnum.TIME_CONSUMED_LONG)] = timeConsumed;
-		objects[getColumnIndex(ColumnEnum.TIME_CONSUMED_STRING)] = "0";
+		objects[getColumnIndex(ColumnEnum.TIME_CONSUMED_STRING)] = createTimeElapsedInString(timeConsumed);
 
 		try {
-			objects[getColumnIndex(ColumnEnum.LOOP_COUNTER)] = 0;
+			objects[getColumnIndex(ColumnEnum.LOOP_COUNTER)] = 1;
 			objects[getColumnIndex(ColumnEnum.NUMBER_OF_REPORTS_PER_LOOP)] = daoCollection.getGlobalDao()
 					.loadCognosConfiguraton(context).getCognosReportURLs().size();
-			objects[getColumnIndex(ColumnEnum.TOTAL_REPORTS_LOADED)] = 0;
+			objects[getColumnIndex(
+					ColumnEnum.TOTAL_REPORTS_LOADED)] = (int) objects[getColumnIndex(ColumnEnum.LOOP_COUNTER)]
+							* (int) objects[getColumnIndex(ColumnEnum.NUMBER_OF_REPORTS_PER_LOOP)];
+
+			objects[getColumnIndex(ColumnEnum.TIME_CONSUMED_PER_LOOP_AVG)] = createTimeElapsedInString(
+					timeConsumed / (int) objects[getColumnIndex(ColumnEnum.LOOP_COUNTER)]);
+			objects[getColumnIndex(ColumnEnum.TIME_CONSUMED_PER_REPORT_AVG)] = createTimeElapsedInString(
+					timeConsumed / (int) objects[getColumnIndex(ColumnEnum.TOTAL_REPORTS_LOADED)]);
+
 		} catch (UserException e) {
 			throw new AppException(e.getCause());
 		}
@@ -144,7 +158,7 @@ public class ProgressStatus extends XJTable implements IClientInvokerListener {
 	}
 
 	public static enum ColumnEnum {
-		ROWNUM, CLIENT_IDENTIFIER, THREAD_ID, LOOP_COUNTER, NUMBER_OF_REPORTS_PER_LOOP, TOTAL_REPORTS_LOADED, TIME_CONSUMED_LONG, TIME_CONSUMED_STRING
+		ROWNUM, CLIENT_IDENTIFIER, THREAD_ID, LOOP_COUNTER, NUMBER_OF_REPORTS_PER_LOOP, TOTAL_REPORTS_LOADED, TIME_CONSUMED_LONG, TIME_CONSUMED_STRING, TIME_CONSUMED_PER_LOOP_AVG, TIME_CONSUMED_PER_REPORT_AVG
 	}
 
 	public static int getColumnIndex(ColumnEnum columnEnum) {
@@ -173,9 +187,19 @@ public class ProgressStatus extends XJTable implements IClientInvokerListener {
 					rowIndex, getColumnIndex(ColumnEnum.TIME_CONSUMED_LONG));
 
 			tableModel.setValueAt(
-					Formatter.formatNumberToString(
-							((long) status[getColumnIndex(ColumnEnum.TIME_CONSUMED_LONG)]) / 1000.0),
-					rowIndex, getColumnIndex(ColumnEnum.TIME_CONSUMED_STRING));
+					createTimeElapsedInString((long) status[getColumnIndex(ColumnEnum.TIME_CONSUMED_LONG)]), rowIndex,
+					getColumnIndex(ColumnEnum.TIME_CONSUMED_STRING));
+
+			tableModel.setValueAt(
+					createTimeElapsedInString(
+							(long) tableModel.getValueAt(rowIndex, getColumnIndex(ColumnEnum.TIME_CONSUMED_LONG))
+									/ (int) tableModel.getValueAt(rowIndex, getColumnIndex(ColumnEnum.LOOP_COUNTER))),
+					rowIndex, getColumnIndex(ColumnEnum.TIME_CONSUMED_PER_LOOP_AVG));
+
+			tableModel.setValueAt(createTimeElapsedInString(
+					(long) tableModel.getValueAt(rowIndex, getColumnIndex(ColumnEnum.TIME_CONSUMED_LONG))
+							/ (int) tableModel.getValueAt(rowIndex, getColumnIndex(ColumnEnum.TOTAL_REPORTS_LOADED))),
+					rowIndex, getColumnIndex(ColumnEnum.TIME_CONSUMED_PER_REPORT_AVG));
 		}
 	}
 
@@ -286,5 +310,56 @@ public class ProgressStatus extends XJTable implements IClientInvokerListener {
 		} catch (UserException e) {
 			ExceptionHandler.handleException(dialog, e);
 		}
+	}
+
+	private static String createTimeElapsedInString(long timeElapsed) {
+
+		long millis = timeElapsed;
+
+		int seconds = (int) (millis / 1000);
+		millis %= 1000;
+
+		int minutes = seconds / 60;
+		seconds %= 60;
+
+		int hours = minutes / 60;
+		minutes %= 60;
+
+		int days = hours / 24;
+		hours %= 24;
+
+		String sDays = days > 0 ? new StringBuilder().append(days).append("d ").toString() : null;
+		String sHours = hours > 0 ? new StringBuilder().append(hours).append("h ").toString() : null;
+		String sMinutes = minutes > 0 ? new StringBuilder().append(minutes).append("m ").toString() : null;
+		String sSeconds = seconds > 0 ? new StringBuilder().append(seconds).append("s ").toString() : null;
+
+		StringBuilder complete = new StringBuilder();
+
+		if (sDays != null) {
+			complete.append(sDays);
+			if (sHours == null) {
+				sHours = "";
+			}
+		}
+
+		if (sHours != null) {
+			complete.append(sHours);
+			if (sMinutes == null) {
+				sMinutes = "";
+			}
+		}
+
+		if (sMinutes != null) {
+			complete.append(sMinutes);
+			if (sSeconds == null) {
+				sSeconds = "";
+			}
+		}
+
+		if (sSeconds != null) {
+			complete.append(sSeconds);
+		}
+
+		return complete.toString().trim();
 	}
 }

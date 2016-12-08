@@ -52,7 +52,7 @@ public class TestDialog extends XJTableDialog {
 				}
 			}
 		});
-		getContentPane().setLayout(new MigLayout("", "[700px,grow]", "[200px][]"));
+		getContentPane().setLayout(new MigLayout("", "[1000px,grow]", "[200px][]"));
 
 		scrollPane = new JScrollPane(ProgressStatus.getInstance());
 		getContentPane().add(scrollPane, "cell 0 0,grow");
